@@ -1,0 +1,149 @@
+{% extends 'tracker/base.html' %}
+{% load static %}
+{% block title %}Buat Laporan — Kalimantan FireWatch{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="mb-8">
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-100">🚨 Laporkan Kejadian Karhutla</h1>
+        <p class="text-slate-400 mt-2 text-sm">Laporan Anda akan diverifikasi oleh admin sebelum ditampilkan di peta publik.</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 space-y-6">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="bg-red-500/10 border border-red-500/30 text-red-300 rounded-lg px-4 py-3 text-sm">
+            {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+        </div>
+        {% endif %}
+
+        <div>
+            <label class="block text-sm font-semibold text-slate-300 mb-1.5">Judul Kejadian <span class="text-red-400">*</span></label>
+            {{ form.judul }}
+            {% for error in form.judul.errors %}<p class="text-red-400 text-xs mt-1">{{ error }}</p>{% endfor %}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+                <label class="block text-sm font-semibold text-slate-300 mb-1.5">Nama Pelapor <span class="text-red-400">*</span></label>
+                {{ form.pelapor_nama }}
+                {% for error in form.pelapor_nama.errors %}<p class="text-red-400 text-xs mt-1">{{ error }}</p>{% endfor %}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-300 mb-1.5">No. WhatsApp / HP <span class="text-red-400">*</span></label>
+                {{ form.pelapor_kontak }}
+                {% for error in form.pelapor_kontak.errors %}<p class="text-red-400 text-xs mt-1">{{ error }}</p>{% endfor %}
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-slate-300 mb-1.5">Provinsi <span class="text-red-400">*</span></label>
+            {{ form.provinsi }}
+            {% for error in form.provinsi.errors %}<p class="text-red-400 text-xs mt-1">{{ error }}</p>{% endfor %}
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-slate-300 mb-1.5">Deskripsi Kejadian <span class="text-red-400">*</span></label>
+            {{ form.deskripsi }}
+            {% for error in form.deskripsi.errors %}<p class="text-red-400 text-xs mt-1">{{ error }}</p>{% endfor %}
+        </div>
+
+        <!-- Foto -->
+        <div>
+            <label class="block text-sm font-semibold text-slate-300 mb-1.5">Foto Kejadian</label>
+            {{ form.foto }}
+            <label for="id_foto" class="flex items-center justify-center gap-2 border-2 border-dashed border-slate-700 rounded-xl py-8 cursor-pointer hover:border-fire-500/50 hover:bg-slate-800/50 transition text-sm text-slate-400">
+                <span class="text-2xl">📷</span>
+                <span id="foto-label">Klik untuk memilih foto (opsional)</span>
+            </label>
+            <img id="foto-preview" class="hidden mt-3 rounded-xl max-h-56 object-cover" alt="Pratinjau foto">
+            {% for error in form.foto.errors %}<p class="text-red-400 text-xs mt-1">{{ error }}</p>{% endfor %}
+        </div>
+
+        <!-- Peta Lokasi -->
+        <div>
+            <label class="block text-sm font-semibold text-slate-300 mb-1.5">Lokasi Kejadian</label>
+            <p class="text-xs text-slate-500 mb-2">Klik peta untuk menandai lokasi, atau gunakan tombol GPS. <em>(Opsional, tapi disarankan)</em></p>
+            <div id="form-map" class="rounded-xl overflow-hidden border border-slate-700" style="height:320px;"></div>
+            <div class="flex items-center justify-between mt-2">
+                <p class="text-xs text-slate-500">Koordinat: <span id="coords-readout" class="text-slate-300 font-mono">belum dipilih</span></p>
+                <button type="button" id="btn-gps" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-300 transition">
+                    📍 Gunakan Lokasi Saya
+                </button>
+            </div>
+            {{ form.latitude }}
+            {{ form.longitude }}
+            {% for error in form.latitude.errors %}<p class="text-red-400 text-xs mt-1">{{ error }}</p>{% endfor %}
+            {% for error in form.longitude.errors %}<p class="text-red-400 text-xs mt-1">{{ error }}</p>{% endfor %}
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 pt-2">
+            <button type="submit" class="flex-1 bg-fire-600 hover:bg-fire-700 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-fire-600/20">
+                🚨 Kirim Laporan
+            </button>
+            <a href="{% url 'tracker:dashboard' %}" class="flex-1 text-center bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-3 rounded-xl transition border border-slate-700">
+                Batal
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'tracker/peta.js' %}"></script>
+<script>
+    const formMap = L.map('form-map').setView([-0.8, 113.5], 6);
+    tambahPetaDasar(formMap);
+
+    let marker = null;
+    const latInput = document.getElementById('id_latitude');
+    const lngInput = document.getElementById('id_longitude');
+    const readout = document.getElementById('coords-readout');
+
+    function setPoint(lat, lng, pan) {
+        lat = parseFloat(lat); lng = parseFloat(lng);
+        if (isNaN(lat) || isNaN(lng)) return;
+        latInput.value = lat.toFixed(6);
+        lngInput.value = lng.toFixed(6);
+        readout.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
+        if (marker) {
+            marker.setLatLng([lat, lng]);
+        } else {
+            marker = L.circleMarker([lat, lng], {
+                color: '#f97316', fillColor: '#f97316', fillOpacity: 0.8, radius: 10
+            }).addTo(formMap);
+        }
+        if (pan) formMap.setView([lat, lng], 13);
+    }
+
+    formMap.on('click', e => setPoint(e.latlng.lat, e.latlng.lng, false));
+
+    // Jika form di-redisplay setelah error, pulihkan marker
+    if (latInput.value && lngInput.value) setPoint(latInput.value, lngInput.value, true);
+
+    document.getElementById('btn-gps').addEventListener('click', () => {
+        if (!navigator.geolocation) { alert('Perangkat Anda tidak mendukung GPS.'); return; }
+        navigator.geolocation.getCurrentPosition(
+            pos => setPoint(pos.coords.latitude, pos.coords.longitude, true),
+            () => alert('Tidak bisa mengakses lokasi. Izinkan akses lokasi atau klik peta manual.')
+        );
+    });
+
+    // Pratinjau foto
+    const fotoInput = document.getElementById('id_foto');
+    const fotoLabel = document.getElementById('foto-label');
+    const fotoPreview = document.getElementById('foto-preview');
+    fotoInput.addEventListener('change', () => {
+        const file = fotoInput.files[0];
+        if (file) {
+            fotoLabel.textContent = file.name;
+            fotoPreview.src = URL.createObjectURL(file);
+            fotoPreview.classList.remove('hidden');
+        } else {
+            fotoLabel.textContent = 'Klik untuk memilih foto (opsional)';
+            fotoPreview.classList.add('hidden');
+        }
+    });
+</script>
+{% endblock %}

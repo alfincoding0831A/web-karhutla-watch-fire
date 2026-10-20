@@ -1,0 +1,75 @@
+{% extends 'tracker/base.html' %}
+{% load static %}
+{% block title %}{{ laporan.judul }} — Kalimantan FireWatch{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <a href="{% url 'tracker:laporan_list' %}" class="text-sm text-slate-400 hover:text-fire-400 transition inline-flex items-center gap-1 mb-6">
+        ← Kembali ke daftar laporan
+    </a>
+
+    <article class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+        {% if laporan.foto %}
+        <div class="max-h-96 overflow-hidden bg-slate-800">
+            <img src="{{ laporan.foto.url }}" alt="{{ laporan.judul }}" class="w-full object-cover">
+        </div>
+        {% endif %}
+
+        <div class="p-6 md:p-8">
+            <div class="flex flex-wrap items-center gap-3 mb-4">
+                <span class="text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide
+                    {% if laporan.status == 'VERIFIED' %}bg-fire-500/10 text-fire-400
+                    {% elif laporan.status == 'HANDLED' %}bg-sky-500/10 text-sky-400
+                    {% elif laporan.status == 'RESOLVED' %}bg-emerald-500/10 text-emerald-400
+                    {% else %}bg-amber-500/10 text-amber-400{% endif %}">{{ laporan.get_status_display }}</span>
+                <span class="text-xs text-slate-500">Laporan #{{ laporan.id }}</span>
+                <span class="text-xs text-slate-500">•</span>
+                <span class="text-xs text-slate-500">{{ laporan.created_at|date:'d F Y H:i' }} WIB</span>
+            </div>
+
+            <h1 class="text-2xl md:text-3xl font-bold text-slate-100 mb-2">{{ laporan.judul }}</h1>
+            <p class="text-sm text-fire-400 font-semibold mb-6">📍 {{ laporan.get_provinsi_display }}</p>
+
+            <div class="prose prose-invert max-w-none">
+                <p class="text-slate-300 leading-relaxed whitespace-pre-line">{{ laporan.deskripsi }}</p>
+            </div>
+
+            {% if laporan.has_location %}
+            <div class="mt-8">
+                <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wide mb-3">🗺️ Lokasi Kejadian</h2>
+                <div id="detail-map" class="rounded-xl overflow-hidden border border-slate-700" style="height:300px;"></div>
+            </div>
+            {% endif %}
+
+            <div class="mt-8 pt-6 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div>
+                    <p class="text-slate-500 text-xs uppercase tracking-wide mb-1">Pelapor</p>
+                    <p class="text-slate-200 font-medium">{{ laporan.pelapor_nama }}</p>
+                </div>
+                <div>
+                    <p class="text-slate-500 text-xs uppercase tracking-wide mb-1">Kontak</p>
+                    <p class="text-slate-200 font-medium">{{ laporan.pelapor_kontak }}</p>
+                </div>
+            </div>
+        </div>
+    </article>
+
+    <div class="mt-6 flex flex-wrap gap-3">
+        <a href="{% url 'tracker:laporan_create' %}" class="bg-fire-600 hover:bg-fire-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition">+ Buat Laporan Baru</a>
+        <a href="{% url 'tracker:kontak' %}" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-5 py-2.5 rounded-xl text-sm font-semibold transition border border-slate-700">🆘 Kontak Darurat</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'tracker/peta.js' %}"></script>
+{% if laporan.has_location %}
+<script>
+    const dmap = L.map('detail-map').setView([{{ laporan.latitude }}, {{ laporan.longitude }}], 13);
+    tambahPetaDasar(dmap);
+    L.circleMarker([{{ laporan.latitude }}, {{ laporan.longitude }}], {
+        color: '#f97316', fillColor: '#f97316', fillOpacity: 0.8, radius: 12
+    }).addTo(dmap).bindPopup('<b>{{ laporan.judul|escapejs }}</b><br>{{ laporan.get_provinsi_display|escapejs }}');
+</script>
+{% endif %}
+{% endblock %}

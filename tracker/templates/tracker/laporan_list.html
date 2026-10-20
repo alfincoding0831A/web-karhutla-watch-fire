@@ -1,0 +1,62 @@
+{% extends 'tracker/base.html' %}
+{% block title %}Laporan Warga — Kalimantan FireWatch{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-slate-100">📢 Laporan Warga</h1>
+            <p class="text-slate-400 mt-1 text-sm">Laporan terverifikasi dari masyarakat di 5 provinsi Kalimantan.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <form method="get" class="flex items-center gap-2">
+                <select name="provinsi" onchange="this.form.submit()" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-fire-500">
+                    <option value="">Semua Provinsi</option>
+                    {% for kode, nama in provinsi_choices %}
+                    <option value="{{ kode }}" {% if filter_provinsi == kode %}selected{% endif %}>{{ nama }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            <a href="{% url 'tracker:laporan_create' %}" class="bg-fire-600 hover:bg-fire-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition whitespace-nowrap">
+                + Buat Laporan
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {% for l in laporan_list %}
+        <a href="{% url 'tracker:laporan_detail' l.pk %}" class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-fire-500/40 transition group flex flex-col">
+            {% if l.foto %}
+            <div class="h-48 overflow-hidden bg-slate-800">
+                <img src="{{ l.foto.url }}" alt="{{ l.judul }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+            </div>
+            {% else %}
+            <div class="h-24 bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center text-3xl opacity-40">🔥</div>
+            {% endif %}
+            <div class="p-5 flex-1 flex flex-col">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide
+                        {% if l.status == 'VERIFIED' %}bg-fire-500/10 text-fire-400
+                        {% elif l.status == 'HANDLED' %}bg-sky-500/10 text-sky-400
+                        {% elif l.status == 'RESOLVED' %}bg-emerald-500/10 text-emerald-400
+                        {% else %}bg-amber-500/10 text-amber-400{% endif %}">{{ l.get_status_display }}</span>
+                    <span class="text-[10px] text-slate-600">{{ l.created_at|date:'d M Y' }}</span>
+                </div>
+                <h3 class="font-bold text-slate-100 group-hover:text-fire-400 transition line-clamp-2">{{ l.judul }}</h3>
+                <p class="text-xs text-slate-500 mt-2 line-clamp-3 flex-1">{{ l.deskripsi|truncatewords:20 }}</p>
+                <div class="flex items-center justify-between mt-4 pt-3 border-t border-slate-800 text-xs text-slate-500">
+                    <span>📍 {{ l.get_provinsi_display }}</span>
+                    <span>oleh {{ l.pelapor_nama|truncatechars:16 }}</span>
+                </div>
+            </div>
+        </a>
+        {% empty %}
+        <div class="col-span-full bg-slate-900 border border-dashed border-slate-700 rounded-2xl p-12 text-center">
+            <p class="text-4xl mb-3">📭</p>
+            <p class="text-slate-400 text-sm">Belum ada laporan{% if filter_provinsi %} di provinsi ini{% endif %}.</p>
+            <a href="{% url 'tracker:laporan_create' %}" class="inline-block mt-4 text-fire-400 hover:text-fire-300 text-sm font-semibold">Buat laporan pertama →</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

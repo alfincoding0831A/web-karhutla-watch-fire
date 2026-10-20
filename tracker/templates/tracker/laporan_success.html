@@ -1,0 +1,36 @@
+{% extends 'tracker/base.html' %}
+{% block title %}Laporan Terkirim — Kalimantan FireWatch{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-10">
+        <div class="w-20 h-20 mx-auto bg-emerald-500/10 rounded-full flex items-center justify-center text-4xl mb-6">
+            ✅
+        </div>
+        <h1 class="text-2xl font-bold text-slate-100 mb-3">Laporan Berhasil Dikirim!</h1>
+        <p class="text-slate-400 text-sm leading-relaxed mb-6">
+            Terima kasih, <span class="text-slate-200 font-semibold">{{ laporan.pelapor_nama }}</span>.
+            Laporan <span class="text-fire-400 font-semibold">#{{ laporan.id }}</span> dengan judul
+            &ldquo;{{ laporan.judul }}&rdquo; telah kami terima.
+        </p>
+
+        <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-4 text-left text-sm mb-8">
+            <p class="text-slate-300 font-semibold mb-2">📋 Tahapan selanjutnya:</p>
+            <ol class="space-y-1.5 text-slate-400 text-xs list-decimal list-inside">
+                <li>Admin memverifikasi laporan Anda (biasanya &lt; 1×24 jam).</li>
+                <li>Jika terverifikasi, laporan tampil di peta publik.</li>
+                <li>Petugas terdekat menindaklanjuti sesuai kebutuhan.</li>
+            </ol>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+            <a href="{% url 'tracker:dashboard' %}" class="flex-1 bg-fire-600 hover:bg-fire-700 text-white font-semibold py-3 rounded-xl transition">
+                🗺️ Kembali ke Dashboard
+            </a>
+            <a href="{% url 'tracker:laporan_create' %}" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-3 rounded-xl transition border border-slate-700">
+                + Laporkan Lagi
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

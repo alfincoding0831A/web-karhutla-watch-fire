@@ -1,0 +1,233 @@
+{% extends 'tracker/base.html' %}
+{% load static %}
+{% block title %}Dashboard — Kalimantan FireWatch{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="relative overflow-hidden border-b border-slate-800">
+    <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-fire-700/20"></div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-20">
+        <div class="max-w-2xl">
+            <span class="inline-block bg-fire-500/10 border border-fire-500/30 text-fire-400 text-xs font-semibold px-3 py-1 rounded-full mb-4">
+                ⚠️ Musim Kemarau Aktif &mdash; Waspada Karhutla
+            </span>
+            <h1 class="text-3xl md:text-5xl font-extrabold leading-tight mb-4">
+                Pemantauan <span class="text-fire-500">Kebakaran Hutan</span> &amp; Lahan di Kalimantan
+            </h1>
+            <p class="text-slate-400 text-base md:text-lg mb-8">
+                Pantau titik hotspot secara langsung, laporkan kejadian di sekitar Anda, dan hubungi petugas darurat setempat — semuanya dalam satu peta.
+            </p>
+            <div class="flex flex-wrap gap-3">
+                <a href="{% url 'tracker:laporan_create' %}" class="bg-fire-600 hover:bg-fire-700 text-white px-6 py-3 rounded-xl font-semibold transition shadow-lg shadow-fire-600/20">
+                    🚨 Laporkan Kejadian
+                </a>
+                <a href="#peta" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-6 py-3 rounded-xl font-semibold transition border border-slate-700">
+                    🗺️ Lihat Peta Hotspot
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+    <!-- Statistik -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center justify-between">
+            <div>
+                <p class="text-slate-500 text-xs uppercase tracking-wide">Total Hotspot</p>
+                <h3 class="text-3xl font-bold text-red-500 mt-1">{{ total_hotspots }}</h3>
+            </div>
+            <div class="text-3xl bg-red-500/10 p-3 rounded-xl text-red-500">🔥</div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center justify-between">
+            <div>
+                <p class="text-slate-500 text-xs uppercase tracking-wide">Status Awas</p>
+                <h3 class="text-3xl font-bold text-orange-500 mt-1">{{ hotspot_awas }}</h3>
+            </div>
+            <div class="text-3xl bg-orange-500/10 p-3 rounded-xl text-orange-500">⚠️</div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center justify-between">
+            <div>
+                <p class="text-slate-500 text-xs uppercase tracking-wide">24 Jam Terakhir</p>
+                <h3 class="text-3xl font-bold text-amber-400 mt-1">{{ hotspot_24jam }}</h3>
+            </div>
+            <div class="text-3xl bg-amber-500/10 p-3 rounded-xl text-amber-400">⏱️</div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center justify-between">
+            <div>
+                <p class="text-slate-500 text-xs uppercase tracking-wide">Laporan Warga</p>
+                <h3 class="text-3xl font-bold text-emerald-400 mt-1">{{ total_laporan }}</h3>
+            </div>
+            <div class="text-3xl bg-emerald-500/10 p-3 rounded-xl text-emerald-400">📢</div>
+        </div>
+    </section>
+
+    <!-- Peta -->
+    <section id="peta" class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl mb-12">
+        <div class="p-5 border-b border-slate-800 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <h2 class="text-lg font-bold text-slate-100">🗺️ Peta Sebaran Titik Hotspot</h2>
+                <p class="text-xs text-slate-500 mt-1">Diperbarui otomatis setiap 60 detik &middot; <span id="last-updated" class="text-slate-400">-</span></p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 text-xs">
+                <select id="filter-provinsi" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-fire-500">
+                    <option value="">Semua Provinsi</option>
+                    {% for kode, nama in provinsi_choices %}
+                    <option value="{{ kode }}">{{ nama }}</option>
+                    {% endfor %}
+                </select>
+                <div class="flex rounded-lg overflow-hidden border border-slate-700">
+                    <button data-status="" class="status-btn active px-3 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 transition">Semua</button>
+                    <button data-status="AWAS" class="status-btn px-3 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 transition border-l border-slate-700">🔴 Awas</button>
+                    <button data-status="SIAGA" class="status-btn px-3 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 transition border-l border-slate-700">🟡 Siaga</button>
+                </div>
+                <a href="{% url 'tracker:export_hotspots' %}" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-300 hover:bg-slate-700 transition">⬇ GeoJSON</a>
+            </div>
+        </div>
+        <div id="map" class="bg-slate-800"></div>
+        <div class="px-5 py-3 border-t border-slate-800 text-xs text-slate-500 flex justify-between">
+            <span>Menampilkan <span id="map-count" class="text-slate-300 font-semibold">0</span> titik hotspot</span>
+            <span class="hidden sm:inline">Sumber: data simulasi &amp; laporan lapangan</span>
+        </div>
+    </section>
+
+    <!-- Per Provinsi -->
+    <section class="mb-12">
+        <h2 class="text-xl font-bold mb-4 text-slate-100">📊 Hotspot per Provinsi</h2>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {% for p in provinsi_stats %}
+            <button onclick="filterProvinsi('{{ p.kode }}')" class="bg-slate-900 border border-slate-800 rounded-xl p-4 text-left hover:border-fire-500/50 hover:bg-slate-800/60 transition group">
+                <p class="text-xs text-slate-500 group-hover:text-fire-400 transition">{{ p.nama }}</p>
+                <p class="text-2xl font-bold text-slate-100 mt-1">{{ p.total }}</p>
+                <p class="text-[10px] text-slate-600 mt-1">titik hotspot</p>
+            </button>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Laporan Terkini -->
+    <section class="mb-12">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-slate-100">📢 Laporan Warga Terkini</h2>
+            <a href="{% url 'tracker:laporan_list' %}" class="text-sm text-fire-400 hover:text-fire-300 transition">Lihat semua →</a>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for l in laporan_publik %}
+            <a href="{% url 'tracker:laporan_detail' l.pk %}" class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-fire-500/40 transition group">
+                {% if l.foto %}
+                <div class="h-40 overflow-hidden bg-slate-800">
+                    <img src="{{ l.foto.url }}" alt="{{ l.judul }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                </div>
+                {% endif %}
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full
+                            {% if l.status == 'VERIFIED' %}bg-fire-500/10 text-fire-400
+                            {% elif l.status == 'HANDLED' %}bg-sky-500/10 text-sky-400
+                            {% elif l.status == 'RESOLVED' %}bg-emerald-500/10 text-emerald-400
+                            {% else %}bg-amber-500/10 text-amber-400{% endif %}">{{ l.get_status_display }}</span>
+                        <span class="text-[10px] text-slate-600">{{ l.created_at|date:'d M Y H:i' }}</span>
+                    </div>
+                    <h3 class="font-semibold text-slate-200 group-hover:text-fire-400 transition line-clamp-2">{{ l.judul }}</h3>
+                    <p class="text-xs text-slate-500 mt-1">📍 {{ l.get_provinsi_display }}</p>
+                </div>
+            </a>
+            {% empty %}
+            <div class="col-span-full bg-slate-900 border border-dashed border-slate-700 rounded-xl p-8 text-center text-slate-500 text-sm">
+                Belum ada laporan terverifikasi. <a href="{% url 'tracker:laporan_create' %}" class="text-fire-400 hover:underline">Jadilah pelapor pertama →</a>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Kontak Darurat -->
+    <section class="mb-4">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-slate-100">🆘 Kontak Darurat</h2>
+            <a href="{% url 'tracker:kontak' %}" class="text-sm text-fire-400 hover:text-fire-300 transition">Semua kontak →</a>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for kontak in kontak_list|slice:':6' %}
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-fire-500/40 transition">
+                <h4 class="font-bold text-slate-100">{{ kontak.nama_instansi }}</h4>
+                <p class="text-xs text-fire-400 font-semibold mb-2">{{ kontak.get_provinsi_display }}</p>
+                <a href="tel:{{ kontak.nomor_telepon }}" class="text-sm text-slate-300 hover:text-fire-400 transition">📞 {{ kontak.nomor_telepon }}</a>
+                {% if kontak.alamat %}
+                <p class="text-xs text-slate-500 mt-1">📍 {{ kontak.alamat|truncatewords:15 }}</p>
+                {% endif %}
+            </div>
+            {% empty %}
+            <p class="col-span-full text-slate-500 text-sm italic">Belum ada kontak darurat. Tambahkan melalui <a href="/admin/" class="text-fire-400 hover:underline">panel admin</a>.</p>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'tracker/peta.js' %}"></script>
+<script>
+    // Peta dengan tampilan Google Maps (tanpa API key)
+    const map = L.map('map').setView([-0.8, 113.5], 6);
+    tambahPetaDasar(map);
+    const markersLayer = L.layerGroup().addTo(map);
+
+    function popupHtml(h) {
+        const color = h.status === 'AWAS' ? '#dc2626' : '#f59e0b';
+        return `
+            <div class="p-1" style="color:#e2e8f0;">
+                <h3 class="font-bold text-sm" style="color:${color};">${h.lokasi_deskripsi}</h3>
+                <p class="text-xs" style="color:#94a3b8;">${h.provinsi_display}</p>
+                <hr style="margin:6px 0;border-color:#334155;">
+                <p class="text-xs"><b>Keyakinan:</b> ${h.tingkat_kepercayaan}%</p>
+                <p class="text-xs"><b>Status:</b> <span style="color:${color};font-weight:700;">${h.status_display}</span></p>
+                <p class="text-xs" style="color:#64748b;">Deteksi: ${h.waktu_terdeteksi}</p>
+            </div>`;
+    }
+
+    let activeStatus = '';
+
+    async function loadHotspots() {
+        const prov = document.getElementById('filter-provinsi').value;
+        const params = new URLSearchParams();
+        if (prov) params.set('provinsi', prov);
+        if (activeStatus) params.set('status', activeStatus);
+        try {
+            const res = await fetch(`/api/hotspots/?${params}`);
+            const data = await res.json();
+            markersLayer.clearLayers();
+            data.hotspots.forEach(h => {
+                const color = h.status === 'AWAS' ? '#dc2626' : '#f59e0b';
+                L.circleMarker([h.latitude, h.longitude], {
+                    color: color, fillColor: color, fillOpacity: 0.7, radius: 10
+                }).bindPopup(popupHtml(h)).addTo(markersLayer);
+            });
+            document.getElementById('map-count').textContent = data.count;
+            document.getElementById('last-updated').textContent = 'Terakhir diperbarui ' + new Date().toLocaleTimeString('id-ID');
+        } catch (e) {
+            console.error('Gagal memuat hotspot:', e);
+        }
+    }
+
+    function filterProvinsi(kode) {
+        document.getElementById('filter-provinsi').value = kode;
+        loadHotspots();
+        document.getElementById('peta').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    document.getElementById('filter-provinsi').addEventListener('change', loadHotspots);
+    document.querySelectorAll('.status-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active', 'bg-fire-600', 'text-white'));
+            btn.classList.add('active', 'bg-fire-600', 'text-white');
+            activeStatus = btn.dataset.status;
+            loadHotspots();
+        });
+    });
+    document.querySelector('.status-btn.active')?.classList.add('bg-fire-600', 'text-white');
+
+    loadHotspots();
+    setInterval(loadHotspots, 60000);
+</script>
+{% endblock %}
